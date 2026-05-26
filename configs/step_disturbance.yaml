@@ -1,0 +1,10 @@
+scenario:
+  name: step_disturbance
+  disturbance:
+    type: step
+    start_time: 8.0
+    value: [0.5, 0.15]
+  payload:
+    enabled: false
+  friction:
+    enabled: false

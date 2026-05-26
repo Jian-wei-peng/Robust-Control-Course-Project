@@ -1,0 +1,62 @@
+simulation:
+  tf: 30.0
+  dt: 0.02
+  seed: 1
+  rtol: 1.0e-07
+  atol: 1.0e-09
+robot:
+  m0: 5.0
+  I0: 0.5
+  d_v0: 1.0
+  d_omega0: 0.5
+trajectory:
+  type: circle
+  radius: 2.0
+  omega: 0.2
+lqr:
+  Q:
+  - 20.0
+  - 20.0
+  - 10.0
+  - 2.0
+  - 2.0
+  R:
+  - 1.0
+  - 1.0
+dob:
+  speed_factor: 8.0
+initial_state:
+  x: 2.2
+  y: 0.1
+  theta: 1.57079632679
+  v: 0.0
+  omega: 0.0
+output:
+  root_dir: results
+  save: true
+  show: false
+scenario:
+  name: piecewise_disturbance
+  disturbance:
+    type: piecewise
+    segments:
+    - - 0.0
+      - 5.0
+      - - 0.0
+        - 0.0
+    - - 5.0
+      - 10.0
+      - - 0.4
+        - 0.0
+    - - 10.0
+      - 15.0
+      - - -0.2
+        - 0.1
+    - - 15.0
+      - 30.0
+      - - 0.2
+        - -0.15
+  payload:
+    enabled: false
+  friction:
+    enabled: false

@@ -1,0 +1,11 @@
+scenario:
+  name: payload_change
+  disturbance:
+    type: none
+  payload:
+    enabled: true
+    change_time: 5.0
+    delta_m: 10.0
+    delta_I: 0.8
+  friction:
+    enabled: false
