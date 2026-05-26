@@ -866,7 +866,67 @@ $$
 - DOB 估计扰动 $\hat d$ 与真实等效扰动的对比；
 - 三种工况下 Pure LQR 与 LQR + DOB 的指标表格。
 
-## 10. Project Feasibility
+## 10. Case Study Results and Interpretation
+
+本项目实现了五组主要仿真实验。每组实验均比较 **Pure LQR** 和 **LQR + DOB** 两种控制器，并保存同场景对比图。实验结果表格由 `results/tables/summary_metrics.csv` 给出。
+
+### 10.1 Experiment Scenarios
+
+| 实验场景 | 配置文件 | 物理含义 | 主要考察内容 | 推荐报告图 |
+|---|---|---|---|---|
+| `nominal` | `configs/nominal.yaml` | 名义质量、名义转动惯量、无外部扰动 | 验证控制器基本轨迹跟踪能力 | `nominal_trajectory_compare.png` |
+| `step_disturbance` | `configs/step_disturbance.yaml` | 在 $t=8s$ 后加入常值外部力/力矩扰动 | 验证 DOB 对阶跃扰动的估计和补偿 | `step_disturbance_position_error_compare.png`, `step_disturbance_disturbance_compare.png` |
+| `piecewise_disturbance` | `configs/piecewise_disturbance.yaml` | 分段常值扰动，模拟间歇外力或地面阻力变化 | 验证 DOB 对慢变/分段常值扰动的跟踪能力 | `piecewise_disturbance_position_error_compare.png`, `piecewise_disturbance_disturbance_compare.png` |
+| `payload_change` | `configs/payload_change.yaml` | 在 $t=5s$ 后质量和转动惯量突变 | 验证参数不确定性下的鲁棒性 | `payload_change_position_error_compare.png`, `payload_change_control_compare.png` |
+| `noise_disturbance` | `configs/noise_disturbance.yaml` | 分段扰动叠加采样保持噪声，并包含摩擦变化 | 验证 DOB 在噪声和摩擦变化下的性能与代价 | `noise_disturbance_position_error_compare.png`, `noise_disturbance_control_compare.png` |
+
+这些对比图均位于：
+
+```text
+results/figures/comparison/
+```
+
+### 10.2 Quantitative Results
+
+当前仿真得到的主要指标如下：
+
+| Scenario | Controller | RMSE | ITAE | Peak Error | Control Effort |
+|---|---|---:|---:|---:|---:|
+| nominal | Pure LQR | 0.0608 | 1.1678 | 0.2258 | 3.1577 |
+| nominal | LQR + DOB | 0.0467 | 0.9804 | 0.2236 | 7.8282 |
+| step_disturbance | Pure LQR | 0.1084 | 45.4233 | 0.2258 | 9.1352 |
+| step_disturbance | LQR + DOB | 0.0471 | 1.5707 | 0.2236 | 13.8754 |
+| piecewise_disturbance | Pure LQR | 0.0775 | 22.8288 | 0.2258 | 5.1375 |
+| piecewise_disturbance | LQR + DOB | 0.0476 | 2.9862 | 0.2236 | 9.9974 |
+| payload_change | Pure LQR | 0.0610 | 1.7202 | 0.2258 | 3.1760 |
+| payload_change | LQR + DOB | 0.0467 | 1.0489 | 0.2236 | 7.8335 |
+| noise_disturbance | Pure LQR | 0.0932 | 27.8622 | 0.2258 | 6.7793 |
+| noise_disturbance | LQR + DOB | 0.0475 | 2.9400 | 0.2236 | 11.6666 |
+
+### 10.3 Result Interpretation
+
+从结果可以看出：
+
+1. **名义工况**：Pure LQR 已能稳定跟踪圆轨迹，LQR + DOB 的 RMSE 略低，但控制能量更高。这说明 DOB 即使在无外部扰动时，也会对非线性误差、初始偏差和等效建模残差产生补偿作用。
+2. **阶跃扰动工况**：Pure LQR 的 ITAE 显著增大，说明扰动后误差恢复慢；LQR + DOB 将 ITAE 从 45.4233 降至 1.5707，表明 DOB 对常值 matched disturbance 有明显补偿效果。
+3. **分段常值扰动工况**：LQR + DOB 的 RMSE 和 ITAE 均明显低于 Pure LQR，说明 DOB 能跟踪扰动切换后的新等效扰动值，适合慢变或分段常值扰动。
+4. **载荷变化工况**：质量和转动惯量突变本质上不是直接外力扰动，但会体现为输入通道的等效集总扰动。LQR + DOB 在该场景下仍能降低 RMSE 和 ITAE，说明其对部分参数摄动具有鲁棒性。
+5. **噪声扰动工况**：LQR + DOB 仍明显降低 RMSE 和 ITAE，但控制能量高于 Pure LQR。这体现了 DOB 的带宽权衡：更积极的扰动补偿可以改善跟踪性能，但会增加控制输入。
+
+总体而言，仿真结果支持本项目的核心结论：**在保持 LQR 名义最优反馈结构的基础上，叠加 DOB 可以显著提升系统对外部扰动和参数不确定性的鲁棒性，但代价是控制输入能量增加。**
+
+### 10.4 DOB Bandwidth Sweep
+
+为分析 DOB 带宽对性能的影响，额外进行了 `run_dob_sweep.py` 实验。该实验在 `piecewise_disturbance` 场景下改变 `dob.speed_factor`，结果保存在：
+
+```text
+results/tables/dob_sweep_metrics.csv
+results/figures/dob_sweep.png
+```
+
+当前结果显示，随着 `speed_factor` 从 2 增大到 12，ITAE 逐渐降低，而控制能量逐渐升高。这说明更快的 DOB 可以更快估计扰动、缩短误差恢复时间，但也会带来更大的控制代价，并可能在含噪声场景中放大高频成分。因此，DOB 带宽需要在抗扰性能和控制平滑性之间折中选择。
+
+## 11. Project Feasibility
 
 本方案符合课程 project 要求：
 
@@ -879,9 +939,9 @@ $$
 
 相比 LQR/$H_\infty$ 或微分博弈方案，本方案更容易完成，推导更清楚，仿真风险更低，同时仍然属于鲁棒控制应用。
 
-## 11. Code Implementation
+## 12. Code Implementation
 
-### 11.1 Code Architecture
+### 12.1 Code Architecture
 
 本项目代码采用 **YAML 配置 + Python 模块 + 实验脚本** 的结构，不使用 CLI。所有实验都可以通过 `experiments/` 目录下的脚本复现。
 
@@ -933,7 +993,7 @@ Robust-Control-Course-Project/
 | `analysis.py` | RMSE、ITAE、峰值误差、控制能量、扰动估计误差 |
 | `plotting.py` | 轨迹图、误差图、控制输入图、扰动估计图、指标对比图 |
 
-### 11.2 Symbol and Variable Mapping
+### 12.2 Symbol and Variable Mapping
 
 代码变量命名尽量与本文数学符号保持一致：
 
@@ -979,7 +1039,7 @@ u=-K\xi-\hat d,\quad
 \tau=\tau_{ff}+K\xi+\hat d
 $$
 
-### 11.3 How to Run Experiments
+### 12.3 How to Run Experiments
 
 依赖安装：
 
@@ -1009,7 +1069,7 @@ conda run -n pyrobot python experiments/run_noise_disturbance.py
 conda run -n pyrobot python experiments/run_dob_sweep.py
 ```
 
-### 11.4 Output Files
+### 12.4 Output Files
 
 每次运行会在 `results/` 下保存结果：
 
@@ -1029,17 +1089,31 @@ results/
 │   ├── summary_metrics.csv
 │   └── dob_sweep_metrics.csv
 └── figures/
+    ├── comparison/
+    │   ├── scenario_trajectory_compare.png
+    │   ├── scenario_position_error_compare.png
+    │   ├── scenario_state_error_compare.png
+    │   ├── scenario_control_compare.png
+    │   └── scenario_disturbance_compare.png
     ├── summary_metrics.png
     └── dob_sweep.png
 ```
 
 其中 `system_checks.json` 保存可控性、可观性、LQR 闭环极点和 DOB 观测器极点；`summary_metrics.csv` 保存 Pure LQR 与 LQR + DOB 在所有工况下的指标对比。
 
-### 11.5 Reproducibility
+`results/raw/scenario_controller/` 中的图片用于单个控制器调试；`results/figures/comparison/` 中的图片用于报告和 slides，对同一工况下的 Pure LQR 与 LQR + DOB 进行直接对比：
+
+- `trajectory_compare.png`：参考轨迹、Pure LQR 轨迹、LQR + DOB 轨迹；
+- `position_error_compare.png`：位置误差范数 $\sqrt{x_e^2+y_e^2}$ 对比；
+- `state_error_compare.png`：$\theta_e,v_e,\omega_e$ 对比；
+- `control_compare.png`：实际输入 $\tau_v,\tau_\omega$ 对比；
+- `disturbance_compare.png`：等效扰动 $d$、DOB 估计 $\hat d$ 和物理扰动 $\tau_d$ 对比。
+
+### 12.5 Reproducibility
 
 所有工况参数都由 `configs/*.yaml` 给出。每个实验运行时会把合并后的配置保存到对应结果目录下的 `config.yaml`，因此可以根据保存配置复现实验结果。噪声扰动使用固定随机种子 `simulation.seed` 和采样保持方式生成，避免连续白噪声直接进入 ODE 导致不可复现。
 
-## 12. References
+## 13. References
 
 [1] Y. Kanayama, Y. Kimura, F. Miyazaki, and T. Noguchi, "A stable tracking control method for an autonomous mobile robot," *Proceedings of IEEE International Conference on Robotics and Automation*, 1990.
 

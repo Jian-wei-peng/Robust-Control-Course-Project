@@ -112,6 +112,91 @@ def plot_dob_sweep(df: pd.DataFrame, path: str | Path, show: bool = False) -> No
     _save_show(fig, Path(path), show)
 
 
+def _label(result: SimulationResult) -> str:
+    return "LQR + DOB" if result.controller_name == "lqr_dob" else "Pure LQR"
+
+
+def plot_trajectory_compare(results: dict[str, SimulationResult], path: str | Path, show: bool = False) -> None:
+    fig, ax = plt.subplots(figsize=(6, 5))
+    first = next(iter(results.values()))
+    ax.plot(first.q_r[:, 0], first.q_r[:, 1], "k--", label="reference")
+    for result in results.values():
+        ax.plot(result.state[:, 0], result.state[:, 1], label=_label(result))
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.set_title(f"Trajectory Comparison - {first.scenario_name}")
+    ax.grid(True)
+    ax.legend()
+    _save_show(fig, Path(path), show)
+
+
+def plot_position_error_compare(results: dict[str, SimulationResult], path: str | Path, show: bool = False) -> None:
+    fig, ax = plt.subplots(figsize=(7, 4))
+    first = next(iter(results.values()))
+    for result in results.values():
+        e_p = np.sqrt(result.xi[:, 0] ** 2 + result.xi[:, 1] ** 2)
+        ax.plot(result.t, e_p, label=_label(result))
+    ax.set_xlabel("t [s]")
+    ax.set_ylabel("position error [m]")
+    ax.set_title(f"Position Error Comparison - {first.scenario_name}")
+    ax.grid(True)
+    ax.legend()
+    _save_show(fig, Path(path), show)
+
+
+def plot_state_error_compare(results: dict[str, SimulationResult], path: str | Path, show: bool = False) -> None:
+    fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True)
+    first = next(iter(results.values()))
+    indices = [2, 3, 4]
+    labels = ["theta_e [rad]", "v_e [m/s]", "omega_e [rad/s]"]
+    for idx, ax, ylabel in zip(indices, axes, labels):
+        for result in results.values():
+            ax.plot(result.t, result.xi[:, idx], label=_label(result))
+        ax.set_ylabel(ylabel)
+        ax.grid(True)
+        ax.legend()
+    axes[-1].set_xlabel("t [s]")
+    fig.suptitle(f"State Error Comparison - {first.scenario_name}")
+    _save_show(fig, Path(path), show)
+
+
+def plot_control_compare(results: dict[str, SimulationResult], path: str | Path, show: bool = False) -> None:
+    fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
+    first = next(iter(results.values()))
+    labels = ["tau_v", "tau_omega"]
+    for idx, ax in enumerate(axes):
+        for result in results.values():
+            ax.plot(result.t, result.tau[:, idx], label=_label(result))
+        ax.set_ylabel(labels[idx])
+        ax.grid(True)
+        ax.legend()
+    axes[-1].set_xlabel("t [s]")
+    fig.suptitle(f"Control Input Comparison - {first.scenario_name}")
+    _save_show(fig, Path(path), show)
+
+
+def plot_disturbance_compare(results: dict[str, SimulationResult], path: str | Path, show: bool = False) -> None:
+    result = results.get("lqr_dob")
+    if result is None:
+        return
+    plot_disturbance_estimate(result, path, show)
+
+
+def save_comparison_plots(results: dict[str, SimulationResult], output_dir: str | Path) -> None:
+    if not results:
+        return
+    output_dir = Path(output_dir)
+    first = next(iter(results.values()))
+    show = bool(first.cfg["output"].get("show", False))
+    scenario_name = first.scenario_name
+    plot_trajectory_compare(results, output_dir / f"{scenario_name}_trajectory_compare.png", show)
+    plot_position_error_compare(results, output_dir / f"{scenario_name}_position_error_compare.png", show)
+    plot_state_error_compare(results, output_dir / f"{scenario_name}_state_error_compare.png", show)
+    plot_control_compare(results, output_dir / f"{scenario_name}_control_compare.png", show)
+    plot_disturbance_compare(results, output_dir / f"{scenario_name}_disturbance_compare.png", show)
+
+
 def save_standard_plots(result: SimulationResult, output_dir: str | Path) -> None:
     output_dir = Path(output_dir)
     show = bool(result.cfg["output"].get("show", False))

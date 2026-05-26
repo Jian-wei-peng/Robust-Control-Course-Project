@@ -15,7 +15,7 @@ if str(SRC) not in sys.path:
 
 from robust_robot.analysis import save_metrics, save_raw_result, summarize_metrics
 from robust_robot.config import load_config, make_output_dir
-from robust_robot.plotting import save_standard_plots
+from robust_robot.plotting import save_comparison_plots, save_standard_plots
 from robust_robot.simulation import run_simulation
 
 
@@ -23,13 +23,18 @@ def run_scenario(scenario_config: str, controllers: list[str] | None = None) -> 
     controllers = controllers or ["lqr", "lqr_dob"]
     cfg = load_config(ROOT / "configs" / "default.yaml", ROOT / "configs" / scenario_config)
     metrics = []
+    scenario_results = {}
 
     for controller_name in controllers:
         result = run_simulation(cfg, controller_name)
+        scenario_results[controller_name] = result
         output_dir = make_output_dir(cfg, result.scenario_name, result.controller_name)
         save_raw_result(result, output_dir)
         save_standard_plots(result, output_dir)
         metrics.append(summarize_metrics(result))
+
+    comparison_dir = ROOT / "results" / "figures" / "comparison"
+    save_comparison_plots(scenario_results, comparison_dir)
 
     metrics_path = ROOT / "results" / "tables" / f"{cfg['scenario']['name']}_metrics.csv"
     save_metrics(metrics, metrics_path)
