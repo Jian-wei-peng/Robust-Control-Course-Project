@@ -2,3 +2,8 @@ __pycache__/
 *.py[cod]
 .matplotlib_cache/
 .DS_Store
+
+# editor swap files
+*.swp
+*.swo
+*~
