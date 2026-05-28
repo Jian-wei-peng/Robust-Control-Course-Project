@@ -58,19 +58,13 @@ LQR with Disturbance-Observer Compensation}
 
 \author{%
 \IEEEauthorblockN{Jianwei Peng}
-\IEEEauthorblockA{Department of Automation\\
-SUSTech\\
-Email: pengjw@example.edu}
+\IEEEauthorblockA{12531290}
 \and
 \IEEEauthorblockN{Han Yang}
-\IEEEauthorblockA{Department of Automation\\
-SUSTech\\
-Email: yangh@example.edu}
+\IEEEauthorblockA{12532527}
 \and
 \IEEEauthorblockN{Ziling Lu}
-\IEEEauthorblockA{Department of Automation\\
-SUSTech\\
-Email: luzl@example.edu}
+\IEEEauthorblockA{12542038}
 }
 
 \maketitle
@@ -179,7 +173,7 @@ formal stability analyses that explicitly relate the LQR Riccati solution
 to the observer pole-placement rule are less common in the educational
 literature; we contribute one such analysis in this paper.
 
-Alternative robust approaches include sliding-mode control~\cite{utkin2013},
+Alternative robust approaches include sliding-mode control~\cite{utkin2009},
 $H_\infty$ synthesis~\cite{zhou1996}, and tube-based model-predictive
 control~\cite{mayne2005}. They offer strong worst-case guarantees but at
 the cost of additional design complexity or controller conservativeness.
@@ -558,9 +552,15 @@ lower arc), whereas LQR+DOB recovers within a fraction of a second.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figs/piecewise_disturbance_trajectory_compare.png}
-  \caption{Trajectory tracking under piecewise disturbance (S3). LQR (blue)
-  vs.\ LQR+DOB (orange); reference (dashed black). The DOB trace stays
-  consistently closer to the reference circle.}
+  \caption{Trajectory tracking under an \emph{enhanced} piecewise
+  disturbance ($\tau_d\in\{(0,0),(3.0,0.8),(-2.5,-0.7),(2.0,0.5)\}$~N$\cdot$m,
+  about $6{-}8\times$ the magnitudes used in the metrics table; the larger
+  swings expose the visual difference between the two controllers on the
+  $R_c{=}2$~m circle). The robot starts $0.22$~m off-track at
+  $(2.20,0.10)$; at $t=30$~s, LQR ends $0.42$~m off the reference while
+  LQR+DOB lands within $1$~mm of it. The LQR trace visibly contracts
+  inside the reference circle along the left arc whenever a torque
+  disturbance is active.}
   \label{fig:traj-pw}
 \end{figure}
 
